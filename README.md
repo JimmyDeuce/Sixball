@@ -1,0 +1,2 @@
+# Sixball
+Dicebot!
