@@ -118,6 +118,18 @@ def dice(num, fac):
 	cosmetic = cosmetic + f'{num}d{fac} = ' + str(roll) + ', '
 	return roll
 
+# Take a list of die results and return the highest or lowest N as a list
+# dice = the input, keep = number of dice to be kept, aim = whether the highest or the lowest result(s) should be kept
+def keep(dice, keep, aim='high'):
+	# Drop kept dice in excess of rolled dice
+	if keep > len(dice):
+		sendmsg(f'Dropping {keep-dice} excess kept dice...')
+	if aim == 'high':
+		kept = sorted(dice)[-keep:]
+	elif aim == 'low':
+		kept = sorted(dice, reverse=True)[-keep:]
+	return kept
+
 # Convert a parsed list of operators and operands to RPN
 def convert(input):
 	# Define order of precedence for operations
