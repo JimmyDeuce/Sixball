@@ -118,6 +118,21 @@ def dice(num, fac):
 	cosmetic = cosmetic + f"{num}d{fac} = " + str(roll) + ", "
 	return roll
 
+# Roll a roll-and-keep pool as per L5R, admitting only numbers as arguments (no general keep highest X, just k as a dice operation)
+def keep(roll, keep, emph=False, boom=10):
+	# Drop excess kept dice:
+		# If roll < 10 and keep > roll, send message "Dropping (difference) excess dice" and subtract the difference from keep
+	# Check for cap breaking (10k10)
+		# while loop: As long as roll > 11 and keep < 10, subtract 2 from roll and add 1 to keep
+		# Then if still roll >10 and keep >10, add the differences, store in a variable, and set both to 10
+	# Get (roll)d10 from dice(roll,10)
+	# If emph == True, for each 1 in the result, roll another die and replace the 1 with that (do not repeat)
+	# For each number >= boom in the result, roll another d10 (including the 1 reroll) and add it to the original number
+	# Repeat as often as necessary
+	# When done, select the (keep) highest items and sum them
+	# Overwrite the global cosmetic string to make all this readable. An ideal output would be something like:
+	# "[User] rolled 5k3: 44 (5k3 = [10+3, 3, 10+10+6, 2, 5])"
+
 # Convert a parsed list of operators and operands to RPN
 def convert(input):
 	# Define order of precedence for operations
