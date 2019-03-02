@@ -107,7 +107,7 @@ def parse (input):
 	return parsed
 
 # Roll dice as a separate function to reference like an operator, for general use by all rollers
-def dice(num, fac):
+def dice(num, fac, track=True):
 	# Limit number and size of dice to be rolled
 	if num > 50:
 		raise Exception("I can't hold that many dice!")
@@ -115,7 +115,8 @@ def dice(num, fac):
 		raise Exception("I don't have dice that big!")
 	roll = [random.randint(1,fac) for i in range(num)]
 	global cosmetic
-	cosmetic = cosmetic + f'{num}d{fac} = ' + str(roll) + ', '
+	if track:
+		cosmetic = cosmetic + f'{num}d{fac} = ' + str(roll) + ', '
 	return roll
 
 # Take a list of die results and return the highest or lowest N as a list
@@ -129,6 +130,27 @@ def keep(dice, keep, aim='high'):
 	elif aim == 'low':
 		kept = sorted(dice, reverse=True)[-keep:]
 	return kept
+
+# Take a list of die results and reroll all dice showing a certain number, either once or indefinitely
+def reroll(dice, val=1, repeat=False):
+	global cosmetic
+	# While loop repeating as long as the value to be rerolled is in dice
+	while val in dice:
+		# Find the indices of all dice with the value to be rerolled and make a list
+		toreroll = [i for i, e in enumerate(dice) if e == val]
+		# roll that many dice again (wait, shit, we need to get the number of sides somehow), without tracking the results in cosmetic
+		rerolls = dice(len(toreroll), ???, False)
+		# Append something like "Reroll {number} {val} -> {rerolled dice list}" to cosmetic
+		cosmetic = cosmetic + f'reroll {lenn(toreroll)} {val} -> {rerolls}' + ', '
+		# replace the affected indices in the original dice list
+		for i in toreroll:
+			dice[i] = rerolls[toreroll.index(i)]
+		# if repeat == False, break the loop, otherwise keep going
+		if not repeat:
+			break
+	# return the new dice list after rerolls
+	return dice
+		
 
 # Convert a parsed list of operators and operands to RPN
 def convert(input):
