@@ -124,7 +124,7 @@ def dice(num, fac, track=True):
 def keep(dice, keep, aim='high'):
 	# Drop kept dice in excess of rolled dice
 	if keep > len(dice):
-		sendmsg(f'Dropping {keep-len(dice)} excess kept dice...')
+		sendmsg(f"Dropping {keep-len(dice)} excess kept dice...")
 	if aim == 'high':
 		kept = sorted(dice)[-keep:]
 	elif aim == 'low':
@@ -141,7 +141,7 @@ def reroll(dice, val=1, repeat=False):
 		# roll that many dice again (wait, shit, we need to get the number of sides somehow), without tracking the results in cosmetic
 		rerolls = dice(len(toreroll), ???, False)
 		# Append something like "Reroll {number} {val} -> {rerolled dice list}" to cosmetic
-		cosmetic = cosmetic + f'reroll {lenn(toreroll)} {val} -> {rerolls}' + ', '
+		cosmetic = cosmetic + f"reroll {len(toreroll)} {val}(s) -> {rerolls}" + ", "
 		# replace the affected indices in the original dice list
 		for i in toreroll:
 			dice[i] = rerolls[toreroll.index(i)]
