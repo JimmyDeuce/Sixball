@@ -5,45 +5,45 @@ import random
 import re
 
 ircsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server = "irc.mibbit.net" # Server
-channel = "#SROOC" # Channel
-botnick = "Sixball" # Nickname
-pwd = "" # Password if bot's nick is registered. Leave empty if bot is unregistered
-adminname = "Jm2c" # Admin username
-exitcode = "bye " + botnick
-commlist = ["!r", "!roll", "!l5r", "!l5roll", "!owod"] # List of recognized roll commands
+server = '' # Server
+channel = '' # Channel
+botnick = 'Sixball' # Nickname
+pwd = '' # Password if bot's nick is registered. Leave empty if bot is unregistered
+adminname = '' # Admin username
+exitcode = 'bye ' + botnick
+commlist = ['!r', '!roll', '!l5r', '!l5roll', '!owod', '!cwod'] # List of recognized roll commands
 
 # Connect to IRC
 ircsock.connect((server, 6667)) # Here we connect to the server using the port 6667
-ircsock.send(bytes("USER "+ botnick +" "+ botnick +" "+ botnick + " " + botnick + "\n", "UTF-8")) #We are basically filling out a form with this line and saying to set all the fields to the bot nickname.
-ircsock.send(bytes("NICK "+ botnick +"\n", "UTF-8")) # assign the nick to the bot
+ircsock.send(bytes('USER '+ botnick +' '+ botnick +' '+ botnick + ' ' + botnick + '\n', 'UTF-8')) #We are basically filling out a form with this line and saying to set all the fields to the bot nickname.
+ircsock.send(bytes('NICK '+ botnick +'\n', 'UTF-8')) # assign the nick to the bot
 
 # Join channel
 def joinchan(chan):
-	ircmsg = ""
-	while ircmsg.find("End of /MOTD command.") == -1:  
-		ircmsg = ircsock.recv(2048).decode("UTF-8")
+	ircmsg = ''
+	while ircmsg.find('End of /MOTD command.') == -1:  
+		ircmsg = ircsock.recv(2048).decode('UTF-8')
 		ircmsg = ircmsg.strip('\n\r')
 		# Supress any blank lines
 		if not ircmsg:
 			continue
 		# Respond to pings during connect
-		elif ircmsg.find("PING :") != -1:
+		elif ircmsg.find('PING :') != -1:
 			print(ircmsg)
 			ping(ircmsg)
 		# Print boilerplate text to console to verify everything is in order
 		else:
 			print(ircmsg)
 	# Join channel once boilerplate ends
-	ircsock.send(bytes("JOIN "+ chan +"\n", "UTF-8")) 
+	ircsock.send(bytes('JOIN '+ chan +'\n', 'UTF-8')) 
 
 # Respond to server pings during normal operation
 def ping(data):
-	ircsock.send(bytes('PONG ' + data.split(':')[1] + '\r\n', "UTF-8"))
+	ircsock.send(bytes('PONG ' + data.split(':')[1] + '\r\n', 'UTF-8'))
 
 # Send messages to target
 def sendmsg(msg, target=channel):
-	ircsock.send(bytes("PRIVMSG "+ target +" :"+ msg +"\n", "UTF-8"))
+	ircsock.send(bytes('PRIVMSG '+ target +' :'+ msg +'\n', 'UTF-8'))
 
 # Decide what to do with a roll command
 def watdo(name, command):
@@ -55,15 +55,15 @@ def watdo(name, command):
 		san = sanitize(command[1],flag)
 		# If there is a problem, return the error message
 		if san:
-			return f'{name}: ' + san
+			return f"{name}: " + san
 		# Otherwise, roll it
 		else:
-			return f'{name} rolled {command[1]}: ' + genroll(command[1])
+			return f"{name} rolled {command[1]}: " + genroll(command[1])
 	# L5R roll and keep
 	elif command[0] == '!l5r' or command[0] == '!l5roll':
-		return 'ごめんなさい、日本語わかりません　(´・ω・｀)'
+		return "ごめんなさい、日本語わかりません　(´・ω・｀)"
 	# oWoD roller
-	elif command[0] == '!owod':
+	elif command[0] == '!owod' or command[0] == '!cwod':
 		return "I'm not edgy enough for that yet!"
 	# Error if somehow none of the commands match
 	else: 
@@ -115,7 +115,7 @@ def dice(num, fac):
 		raise Exception("I don't have dice that big!")
 	roll = [random.randint(1,fac) for i in range(num)]
 	global cosmetic
-	cosmetic = cosmetic + f'{num}d{fac} = ' + str(roll) + ', '
+	cosmetic = cosmetic + f"{num}d{fac} = " + str(roll) + ", "
 	return roll
 
 # Convert a parsed list of operators and operands to RPN
@@ -225,7 +225,7 @@ def genroll(input):
 	dice = parse(input)
 	# Initialize/flush global string to track individual die results
 	global cosmetic
-	cosmetic = ''
+	cosmetic = ""
 	# Convert input to RPN
 	rpn = convert(dice)
 	# resolve converted input
@@ -236,15 +236,15 @@ def genroll(input):
 def main():
 	joinchan(channel)	# Join
 	if pwd:
-		sendmsg(f'identify {pwd}', 'NickServ')	# Authenticate if a password is set
+		sendmsg(f"identify {pwd}", "NickServ")	# Authenticate if a password is set
 	sendmsg("Hi!")	# Confirm successful join
 	
 	while True:
 		# Get messages
-		ircmsg = ircsock.recv(2048).decode("UTF-8")
+		ircmsg = ircsock.recv(2048).decode('UTF-8')
 		ircmsg = ircmsg.strip('\n\r')
 		print(ircmsg)
-		if ircmsg.find("PRIVMSG") != -1:
+		if ircmsg.find('PRIVMSG') != -1:
 			# Split incoming message into name of sender and content
 			name = ircmsg.split('!',1)[0][1:]
 			message = ircmsg.split('PRIVMSG',1)[1].split(':',1)[1]
@@ -257,11 +257,11 @@ def main():
 					sendmsg("Hello " + name + "!")
 				# Recite the runner mantra
 				if message == '!fixalot':
-					sendmsg('(ﾉ≧∀≦)ﾉ "Watch your back. Shoot straight. Conserve ammo. And never, ever deal with a dragon!"')
+					sendmsg("(ﾉ≧∀≦)ﾉ \"Watch your back. Shoot straight. Conserve ammo. And never, ever deal with a dragon!\"")
 				# Leave channel command
 				if name.lower() == adminname.lower() and message.rstrip() == exitcode:
 					sendmsg("Bye! <3")
-					ircsock.send(bytes("QUIT \n", "UTF-8"))
+					ircsock.send(bytes("QUIT \n", 'UTF-8'))
 					return
 				
 				# Roll commands: compare first word in message to list of commands
@@ -273,7 +273,7 @@ def main():
 					except Exception as e:
 						sendmsg(f"{name}: " + str(e))
 		else:
-			if ircmsg.find("PING :") != -1:
+			if ircmsg.find('PING :') != -1:
 				ping(ircmsg)
 
 main()
