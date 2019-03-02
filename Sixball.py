@@ -123,7 +123,7 @@ def dice(num, fac):
 def keep(dice, keep, aim='high'):
 	# Drop kept dice in excess of rolled dice
 	if keep > len(dice):
-		sendmsg(f'Dropping {keep-dice} excess kept dice...')
+		sendmsg(f'Dropping {keep-len(dice)} excess kept dice...')
 	if aim == 'high':
 		kept = sorted(dice)[-keep:]
 	elif aim == 'low':
