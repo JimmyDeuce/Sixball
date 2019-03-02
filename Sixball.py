@@ -258,6 +258,9 @@ def main():
 				# Recite the runner mantra
 				if message == '!fixalot':
 					sendmsg("(ﾉ≧∀≦)ﾉ \"Watch your back. Shoot straight. Conserve ammo. And never, ever deal with a dragon!\"")
+				# Squid
+				if message == '!squid':
+					sendmsg("＜コ:彡")
 				# Leave channel command
 				if name.lower() == adminname.lower() and message.rstrip() == exitcode:
 					sendmsg("Bye! <3")
