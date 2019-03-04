@@ -116,19 +116,21 @@ class handler:
 	def _resolve(self, input):
 		# Find any dice expressions in the input string
 		if re.search(dicestring, input):
+			RNJesus = rng()
 			parts = re.split(dicesplit, input)
 			# For each dice expression found, pass that to rng to resolve it
 			for i, expr in enumerate(parts):
 				if re.match(dicestring, expr):
 					# Substitute the expressions in the input string with the rng results
-					parts[i] = rng.genroll(expr)
+					parts[i] = RNJesus.genroll(expr)
 			# Concatenate the parts list back together and pass the remaining arithmetic to math
 			arithmetic = ''.join(parts)
 		else:
 			arithmetic = input
-		res = math.calculate(arithmetic)
+		Magic = math()
+		res = Magic.calculate(arithmetic)
 		# Return the final value and cosmetic string
-		return f"{res} ({rng.cosmetic.rstrip(', ')})"
+		return f"{res} ({RNJesus.cosmetic.rstrip(', ')})"
 
 	
 	# Specialized roll functions that translate a simplified input to particular dice strings
@@ -344,12 +346,9 @@ def main():
 				
 				# Roll commands: compare first word in message to list of commands
 				if message.split(' ')[0] in commlist: 
-					# Initialize rng and math
-					#rng = rng()
-					#math = math()
 					# Call the roll command handler with message.split(' ') and do something with it!
 					try: 
-						res = handler.watdo(name, message.split(' '))
+						res = Process.watdo(name, message.split(' '))
 						Sixball.sendmsg(res)
 					except Exception as e:
 						Sixball.sendmsg(f"{name}: " + str(e))
@@ -359,8 +358,6 @@ def main():
 
 # Initialize classes
 Sixball = irc()
-handler = handler()
-rng = rng()
-math = math()
+Process = handler()
 
 main()
