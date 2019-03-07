@@ -224,9 +224,11 @@ class rng:
 				break
 			# Otherwise, recount dice to be rolled in the new pool and continue until no more dice show the reroll value
 			toreroll = pool.count(self._re)
+		# Return the pool
+		return pool
 	
 	# Take a list of die results and explode particular values, adding the new roll results to the old values
-	def _explode(self, pool, extrawust=False):
+	def _explode(self, pool, extrawurst=False):
 		# No exploding everything!
 		if self._exp <= 1:
 			raise Exception("Please no ;_;")
@@ -235,6 +237,9 @@ class rng:
 			raise Exception("That's too explosive!")
 		# Count the dice to be exploded, which is any dice showing the explode number or higher
 		tnt = sum(1 for die in pool if die >= self._exp)
+		# If there are no dice to explode, just return the original pool and be done
+		if tnt == 0:
+			return pool
 		# Initialize list to hold explosions
 		boom = []
 		# As long as any dice show the explosion number(s)...
@@ -244,7 +249,7 @@ class rng:
 			# Report them to cosmetic
 			self.cosmetic = self.cosmetic + f"explode {tnt} dice over {self._exp} -> " + str(boom[-1]) + ", "
 			# Then count any dice to explode again
-			tnt = sum(1 for die in boom if die >= self._exp)
+			tnt = sum(1 for die in boom[-1] if die >= self._exp)
 		# Once done exploding, check if this explosion cares about which dice exploded into which dice
 		if extrawurst:
 			# If it does, go backwards through the explosion pools
@@ -274,7 +279,7 @@ class rng:
 	def _keep(self, pool, aim='highest'):
 		# Drop kept dice in excess of rolled dice
 		if self._kp > len(pool):
-			sendmsg(f"Dropping {self._kp-len(dice)} excess kept dice...")
+			Sixball.sendmsg(f"Dropping {self._kp-len(dice)} excess kept dice...")
 			self._keep = len(pool)
 		# Keep highest
 		if aim == 'highest':
