@@ -262,6 +262,7 @@ class rng:
 			for i, die in enumerate(pool):
 				if die >= self._exp:
 					pool[i] = pool[i] + final.pop()
+			self.cosmetic = self.cosmetic + "total: " + str(pool) + ", "
 		# If not, just put all the dice together
 		else:
 			for res in boom:
