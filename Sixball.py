@@ -17,8 +17,9 @@ commlist = ['!r', '!roll', '!l5r', '!l5roll', '!owod', '!cwod'] # List of recogn
 # Regex strings
 mathparse = '([+*-/^%)(])' # Regex string for parsing arithmetic string input as a list
 diceparse = '(d)' # Regex string for parsing dice expression strings as a list
-dicestring = '\d+d\d+' # Regex string for detecting a dice expression
-dicesplit = '(\d+d\d+)' # Regex string for splitting the dice expression(s) out of a string
+dicestring = '\d+d\d+(k\d+)*' # Regex string for detecting a dice expression
+dicesplit = '(\d+d\d+(k\d+)*)' # Regex string for splitting the dice expression(s) out of a string
+opstring = 'k' # Regex string for recognizing allowed dice operators
 
 # Connect to IRC
 ircsock.connect((server, 6667)) # Here we connect to the server using the port 6667
@@ -143,10 +144,10 @@ class rng:
 	def __init__(self):
 		self._num = 0 # Number of dice to be rolled
 		self._fac = 0 # Number of faces
-		self._reroll = 0 # Number which should trigger a reroll
-		self._keep = 0 # Number of dice to be kept
-		self._explode = 0 # Number which should explode (equal or higher)
-		self._target = 0 # Target number for rolls comparing individual die results to a target number
+		self._re = 0 # Number which should trigger a reroll
+		self._kp = 0 # Number of dice to be kept
+		self._exp = 0 # Number which should explode (equal or higher)
+		self._tgt = 0 # Target number for rolls comparing individual die results to a target number
 		self._botch = 0 # Number which should count as negative successes on target rolls (equal or lower)
 		self.cosmetic = "" # Cosmetic string for tracking individual roll operations
 	
@@ -165,8 +166,24 @@ class rng:
 		self._fac = int(queue.pop())
 		# Call _dice to resolve the basic roll and store
 		rolls = self._dice(self._num, self._fac)
-		# then for each operator, convert the number to its right (now left) to int, assign to the appropriate variable, and call the corresponding method
-		
+		# As long as items are in the queue...
+		while len(queue) > 0:
+			# Get next item
+			item = queue.pop()
+			# As we require input to be alternating numbers and operators, the top item should always be an operator when checked
+			if re.match(opstring, item):
+				# If there is another element in the queue and it's a number
+				if len(queue) >= 1 and type(queue[-1]) == int:
+					# Perform the appropriate operation
+					if item == 'k':
+						self._kp = queue.pop()
+						rolls = self._keep
+					else:
+						raise Exception(f"What's a(n) {item}")
+				else:
+					raise Exception("Can you check your operators? I'm kind of fussy!")
+			else:
+				raise Exception("Can you check your operators? I'm kind of fussy!")
 		# If the final output is a list of die results, sum them (if the final result is just a number of successes, it will still be in the rolls list, so sum works)
 		result = sum(rolls)
 		# Then return the result as a string
@@ -190,11 +207,85 @@ class rng:
 		return roll
 	
 	# Take a list of die results and reroll particular values, replacing those values with the new roll and documenting the rerolls
+	def _reroll(self, pool, repeat=False):
+		# Count the dice to be rerolled
+		toreroll = pool.count(self._re)
+		# As long as there are any dice showing the reroll number...
+		while toreroll > 0:
+			# For each die in the pool showing that number...
+			for i, die in enumerate(pool):
+				if die == self._re:
+					# Replace it with a new roll, without tracking those rolls
+					pool[i] = random.randint(1,self._fac)
+			# Then report the rerolls to cosmetic
+			self.cosmetic = self.cosmetic + f"reroll {toreroll} {self._re}(s) -> " + str(pool) + ", "
+			# If repeat is toggled off, stop there
+			if not repeat:
+				break
+			# Otherwise, recount dice to be rolled in the new pool and continue until no more dice show the reroll value
+			toreroll = pool.count(self._re)
 	
 	# Take a list of die results and explode particular values, adding the new roll results to the old values
+	def _explode(self, pool, extrawust=False):
+		# No exploding everything!
+		if self._exp <= 1:
+			raise Exception("Please no ;_;")
+		# Actually, let's limit the explosions to a sane level
+		if self._exp < self._fac / 2:
+			raise Exception("That's too explosive!")
+		# Count the dice to be exploded, which is any dice showing the explode number or higher
+		tnt = sum(1 for die in pool if die >= self._exp)
+		# Initialize list to hold explosions
+		boom = []
+		# As long as any dice show the explosion number(s)...
+		while tnt > 0:
+			# Roll that many dice and add them to boom
+			boom.append([random.randint(1,self._fac) for i in range(tnt)])
+			# Report them to cosmetic
+			self.cosmetic = self.cosmetic + f"explode {tnt} dice over {self._exp} -> " + str(boom[-1]) + ", "
+			# Then count any dice to explode again
+			tnt = sum(1 for die in boom if die >= self._exp)
+		# Once done exploding, check if this explosion cares about which dice exploded into which dice
+		if extrawurst:
+			# If it does, go backwards through the explosion pools
+			while len(boom) > 1:
+				item = boom.pop()
+				item.reverse() # Reverse to be able to pop from left to right
+				for i, die in enumerate(boom[-1]):
+					# Find the dice that exploded in the second to last boom pool left to right
+					if die >= self._exp:
+						# For each of them, add one of the dice in the last pool, left to right
+						boom[-1][i] = boom[-1][i] + item.pop()
+			# Once only one pool is left in boom, do the same one more time with the original pool
+			final = boom.pop()
+			final.reverse()
+			for i, die in enumerate(pool):
+				if die >= self._exp:
+					pool[i] = pool[i] + final.pop()
+		# If not, just put all the dice together
+		else:
+			for res in boom:
+				pool = pool + res
+		# Return the final result
+		return pool
 	
 	# Take a list of die results and keep either the highest or the lowest N
-	
+	def _keep(self, pool, aim='highest'):
+		# Drop kept dice in excess of rolled dice
+		if self._kp > len(pool):
+			sendmsg(f"Dropping {self._kp-len(dice)} excess kept dice...")
+			self._keep = len(pool)
+		# Keep highest
+		if aim == 'highest':
+			kept = sorted(pool)[-self._kp:]
+		# Keep lowest
+		if aim == 'lowest':
+			kept = sorted(pool, reverse=True)[-self._kp:]
+		# Track in cosmetic
+		self.cosmetic = self.cosmetic + f"keep {aim} {self._kp} -> " + str(kept) + ", "
+		# Return results
+		return kept
+			
 	# Take a list of die results and compare each to a target number and botch number, returning the final number of successes as an int
 
 
