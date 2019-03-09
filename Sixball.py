@@ -6,20 +6,20 @@ import re
 
 # Settings
 ircsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server = '' # Server
-channel = '' # Channel
+server = 'irc.rizon.net' # Server
+channel = '#sixball-test' # Channel
 botnick = 'Sixball' # Nickname
 pwd = '' # Password if bot's nick is registered. Leave empty if bot is unregistered
-adminname = '' # Admin username
+adminname = 'Jm2c' # Admin username
 exitcode = 'bye ' + botnick
 commlist = ['!r', '!roll', '!l5r', '!l5roll', '!owod', '!cwod'] # List of recognized roll commands
 
 # Regex strings
 mathparse = '([+*-/^%)(])' # Regex string for parsing arithmetic string input as a list
-diceparse = '(d)' # Regex string for parsing dice expression strings as a list
-dicestring = '\d+d\d+(k\d+)*' # Regex string for detecting a dice expression
-dicesplit = '(\d+d\d+(k\d+)*)' # Regex string for splitting the dice expression(s) out of a string
-opstring = 'k' # Regex string for recognizing allowed dice operators
+diceparse = '([dker])' # Regex string for parsing dice expression strings as a list
+dicestring = '\d+d\d+(?:[ker]\d+)*' # Regex string for detecting a dice expression
+dicesplit = '(\d+d\d+(?:[ker]\d+)*)' # Regex string for splitting the dice expression(s) out of a string
+opstring = '[ker]' # Regex string for recognizing allowed dice operators
 
 # Connect to IRC
 ircsock.connect((server, 6667)) # Here we connect to the server using the port 6667
@@ -75,7 +75,15 @@ class handler:
 				return f"{name} rolled {command[1]}: " + self._resolve(command[1])
 		# L5R roll and keep
 		elif command[0] == '!l5r' or command[0] == '!l5roll':
-			return "ごめんなさい、日本語わかりません　(´・ω・｀)"
+			# Sanitize input
+			flag = 'weebroll'
+			san = self._sanitize(command[1],flag)
+			# If there is a problem, return the error message
+			if san:
+				return f"{name}: " + san
+			# Otherwise, roll it
+			else:
+				return f"{name} rolled {command[1]}: " + self._weebroll(command[1])
 		# oWoD roller
 		elif command[0] == '!owod' or command[0] == '!cwod':
 			return "I'm not edgy enough for that yet!"
@@ -93,11 +101,11 @@ class handler:
 			valid = False
 			return "How many dice do you want me to roll?"
 		# Check for duplicate operators. Remember to update when adding new dice functions!
-		elif re.search('[d+*-/^%][d+*-/^%]+',input):
+		elif re.search('[dker+*-/^%][dker+*-/^%]+',input):
 			valid = False
 			return "You typed an operator twice, can you try again?"
 		# Check for operators at end of string. Remember to update when adding new dice functions!
-		elif re.search('[d+*-/^%(]$',input):
+		elif re.search('[dker+*-/^%(]$',input):
 			valid = False
 			return "Something's missing at the end, can you try again?"
 
@@ -105,19 +113,25 @@ class handler:
 		# Conditions specific to the generic roller
 		if valid and flag == 'genroll':
 			# Check for illegal characters
-			if re.search('[^d\d+*-/^%)(]',input):
+			if re.search('[^dker\d+*-/^%)(]',input):
 				valid = False
 				return "I don't know how to roll that!"
-			
+		
+		if valid and flag == 'weebroll':
+			# Check for illegal characters
+			if re.search('[^ker\d+*-/^%)(]', input):
+				valid = False
+				return "I don't know how to roll that!"
+		
 		# OK if input is still valid at this point
 		if valid:
 			return False
 	
 	# Take an input string and pass blocks of it to math and dice as appropriate
 	def _resolve(self, input):
+		RNJesus = rng()
 		# Find any dice expressions in the input string
 		if re.search(dicestring, input):
-			RNJesus = rng()
 			parts = re.split(dicesplit, input)
 			# For each dice expression found, pass that to rng to resolve it
 			for i, expr in enumerate(parts):
@@ -135,6 +149,23 @@ class handler:
 
 	
 	# Specialized roll functions that translate a simplified input to particular dice strings
+	# L5R roller
+	def _weebroll(self, input):
+		# Find roll and keep expression(s) in the input string
+		if re.search('\d+k\d+', input):
+			parts = re.split('(\d+k\d+)', input)
+			# For each roll and keep expression found...
+			for i, expr in enumerate(parts):
+				if re.match('\d+k\d+', expr):
+					# ...translate that into genroll notation
+					parts[i] = f'{re.split("k", expr)[0]}d10e10k{re.split("k", expr)[1]}'
+			# Concatenate back together and pass to resolve
+			dicery = ''.join(parts)
+		else:
+			dicery = input
+		res = self._resolve(dicery)
+		# Return the final value and cosmetic string
+		return f"{res}"
 
 
 # RNG class
@@ -173,13 +204,19 @@ class rng:
 			# As we require input to be alternating numbers and operators, the top item should always be an operator when checked
 			if re.match(opstring, item):
 				# If there is another element in the queue and it's a number
-				if len(queue) >= 1 and type(queue[-1]) == int:
+				if len(queue) >= 1:
 					# Perform the appropriate operation
 					if item == 'k':
-						self._kp = queue.pop()
-						rolls = self._keep
+						self._kp = int(queue.pop())
+						rolls = self._keep(rolls)
+					elif item == 'r':
+						self._re = int(queue.pop())
+						rolls = self._reroll(rolls)
+					elif item == 'e':
+						self._exp = int(queue.pop())
+						rolls = self._explode(rolls)
 					else:
-						raise Exception(f"What's a(n) {item}")
+						raise Exception(f"What's a(n) {item}?")
 				else:
 					raise Exception("Can you check your operators? I'm kind of fussy!")
 			else:
@@ -228,7 +265,7 @@ class rng:
 		return pool
 	
 	# Take a list of die results and explode particular values, adding the new roll results to the old values
-	def _explode(self, pool, extrawurst=False):
+	def _explode(self, pool, extrawurst=True):
 		# No exploding everything!
 		if self._exp <= 1:
 			raise Exception("Please no ;_;")
@@ -267,12 +304,12 @@ class rng:
 			for i, die in enumerate(pool):
 				if die >= self._exp:
 					pool[i] = pool[i] + final.pop()
-			self.cosmetic = self.cosmetic + "total: " + str(pool) + ", "
 		# If not, just put all the dice together
 		else:
 			for res in boom:
 				pool = pool + res
 		# Return the final result
+		self.cosmetic = self.cosmetic + "total: " + str(pool) + ", "
 		return pool
 	
 	# Take a list of die results and keep either the highest or the lowest N
