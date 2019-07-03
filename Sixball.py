@@ -7,10 +7,10 @@ import re
 # Settings
 ircsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server = 'irc.rizon.net' # Server
-channel = '#sixball-test' # Channel
+channel = '#Sixball-test' # Channel
 botnick = 'Sixball' # Nickname
 pwd = '' # Password if bot's nick is registered. Leave empty if bot is unregistered
-adminname = 'Jm2c' # Admin username
+adminname = '' # Admin username
 exitcode = 'bye ' + botnick
 commlist = ['!r', '!roll', '!l5r', '!l5roll', '!owod', '!cwod'] # List of recognized roll commands
 
@@ -119,7 +119,7 @@ class handler:
 		
 		if valid and flag == 'weebroll':
 			# Check for illegal characters
-			if re.search('[^ker\d+*-/^%)(]', input):
+			if re.search('[^ker\d+*-/^%)(!?~]', input):
 				valid = False
 				return "I don't know how to roll that!"
 		
@@ -152,13 +152,52 @@ class handler:
 	# L5R roller
 	def _weebroll(self, input):
 		# Find roll and keep expression(s) in the input string
-		if re.search('\d+k\d+', input):
-			parts = re.split('(\d+k\d+)', input)
+		if re.search('\d+k\d+(\?|[!~]{0,2})?', input):	# Matches one or more digits, followed by a 'k', followed by one or more digits, followed by up to one '?' OR up to two instances of '!' and/or '~' in any order. '!!' and '~~' is not actually allowable but filtered out by the sanitation (although the script could handle them).
+			parts = re.split('(\d+k\d+(\?|[!~]{0,2}))', input)
 			# For each roll and keep expression found...
 			for i, expr in enumerate(parts):
-				if re.match('\d+k\d+', expr):
+				if re.match('\d+k\d+(\?|[!~]{0,2})', expr):
+					emph = 0
+					exp = 10
+					# ...check for emphasis, untrained, and/or exploding on 9 operator at the end
+					while re.search('[!?~]$', expr):
+						# If emphasis operator is found, set number to reroll dice on to 1 and remove operator from string
+						if re.search('!$', expr):
+							emph = 1
+							expr = expr.rstrip('!')
+						# If untrained operator is found, set number to explode dice on to 11 (meaning no dice will explode) and remove operator from string
+						if re.search('?$', expr):
+							exp = 11
+							expr = expr.rstrip('?')
+						# If explode on 9 operator is found, set number to explode dice on to 9 (duh) and remove operator from string
+						if re.search('~$', expr):
+							exp = 9
+							expr = expr.rstrip('~')
+					# ...get number of dice to roll and keep
+					roll = int(re.split("k", expr)[0])
+					keep = int(re.split("k", expr)[1])
+					# ...check for cap-breaking
+					if keep > roll:
+						Sixball.sendmsg(f"Dropping {keep-roll} excess kept dice...")
+						keep = roll
+					convert = False
+					while roll > 11 and keep < 10:
+						roll = roll - 2
+						keep = keep + 1
+						convert = True
+					bonus = 0
+					if roll > 10:
+						bonus = bonus + 2 * (roll - 10)
+						roll = 10
+						convert = True
+					if keep > 10: 
+						bonus = bonus + 2 * (keep - 10)
+						keep = 10
+						convert = True
+					if convert:
+						Sixball.sendmsg(f"Converting {expr} to {roll}k{keep}+{bonus}...")
 					# ...translate that into genroll notation
-					parts[i] = f'{re.split("k", expr)[0]}d10e10k{re.split("k", expr)[1]}'
+					parts[i] = f'{roll}d10r{emph}e{exp}k{keep}+{bonus}'
 			# Concatenate back together and pass to resolve
 			dicery = ''.join(parts)
 		else:
