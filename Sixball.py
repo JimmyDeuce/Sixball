@@ -122,6 +122,8 @@ class handler:
 			if re.search('[^ker\d+*-/^%)(!?~]', input):
 				valid = False
 				return "I don't know how to roll that!"
+			# Check for illegal combinations of suffixes
+			if re.search('[^ker\d+*-/^%)(!?~]', input):
 		
 		# OK if input is still valid at this point
 		if valid:
@@ -153,7 +155,7 @@ class handler:
 	def _weebroll(self, input):
 		# Find roll and keep expression(s) in the input string
 		if re.search('\d+k\d+(\?|[!~]{0,2})?', input):	# Matches one or more digits, followed by a 'k', followed by one or more digits, followed by up to one '?' OR up to two instances of '!' and/or '~' in any order. '!!' and '~~' is not actually allowable but filtered out by the sanitation (although the script could handle them).
-			parts = re.split('(\d+k\d+(\?|[!~]{0,2}))', input)
+			parts = re.split('(\d+k\d+(?:\?|[!~]{0,2}))', input)
 			# For each roll and keep expression found...
 			for i, expr in enumerate(parts):
 				if re.match('\d+k\d+(\?|[!~]{0,2})', expr):
@@ -166,7 +168,7 @@ class handler:
 							emph = 1
 							expr = expr.rstrip('!')
 						# If untrained operator is found, set number to explode dice on to 11 (meaning no dice will explode) and remove operator from string
-						if re.search('?$', expr):
+						if re.search('\?$', expr):
 							exp = 11
 							expr = expr.rstrip('?')
 						# If explode on 9 operator is found, set number to explode dice on to 9 (duh) and remove operator from string
@@ -323,7 +325,7 @@ class rng:
 			# Roll that many dice and add them to boom
 			boom.append([random.randint(1,self._fac) for i in range(tnt)])
 			# Report them to cosmetic
-			self.cosmetic = self.cosmetic + f"explode {tnt} dice over {self._exp} -> " + str(boom[-1]) + ", "
+			self.cosmetic = self.cosmetic + f"explode {tnt} di(c)e over {self._exp} -> " + str(boom[-1]) + ", "
 			# Then count any dice to explode again
 			tnt = sum(1 for die in boom[-1] if die >= self._exp)
 		# Once done exploding, check if this explosion cares about which dice exploded into which dice
